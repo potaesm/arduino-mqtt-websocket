@@ -3,10 +3,10 @@
 #include "WebSocketsClient.h"
 #include "SimpleWifi.h"
 
-String clientName = "ESP8266Client";
+String CLIENT_NAME = "ESP8266Client";
 
-const static String MQTT_username = "MQTT_username";
-const static String MQTT_password = "MQTT_password";
+const static String MQTT_USERNAME = "MQTT_USERNAME";
+const static String MQTT_PASSWORD = "MQTT_PASSWORD";
 const static int MQTT_ALIVE_TIME = 30;
 
 #define MQTT_PING_INTERVAL 10000
@@ -23,67 +23,67 @@ const static int MQTT_ALIVE_TIME = 30;
 #define WS_CONNECTED 3
 #define MQTT_CONNECTED 4
 
-byte WS_MQTT_status = WIFI_FAIL;
+byte WS_MQTT_STATUS = WIFI_FAIL;
 
 WebSocketsClient webSocket;
 
 long lastTimeMQTTActive = -10000;
 long lastTimeMQTTConnect = 0;
-int mqtt_feedback_count = 0;
+int mqttFeedbackCount = 0;
 
-byte MQTT_package_id = 2;
+byte mqttPackageId = 2;
 static uint8_t bufferMQTTPing[2] = {192, 0};
-static uint8_t MQTTConnectHeader[12] = {16, 78, 0, 4, 77, 81, 84, 84, 4, 194, 0, 15};
+static uint8_t mqttConnectHeader[12] = {16, 78, 0, 4, 77, 81, 84, 84, 4, 194, 0, 15};
 static uint8_t pSubscribeRequest[MQTT_TOPIC_LENGTH_MAX + 7];
 static uint8_t pUnSubscribeRequest[MQTT_TOPIC_LENGTH_MAX + 6];
 static uint8_t pPublishRequest[MQTT_TOPIC_LENGTH_MAX + MQTT_PAYLOAD_LENGTH_MAX + 5];
 static uint8_t pConnectRequest[128];
 
-void mqttConnect(String mqtt_clentID, uint8_t mqtt_alive_time, String mqtt_username, String mqtt_password)
+void mqttConnect(String mqttClientId, uint8_t mqttAliveTime, String mqttUsername, String mqttPassword)
 {
-    MQTTConnectHeader[11] = mqtt_alive_time;
-    MQTTConnectHeader[1] = 10 + 2 + mqtt_clentID.length() + 2 + mqtt_username.length() + 2 + mqtt_password.length();
+    mqttConnectHeader[11] = mqttAliveTime;
+    mqttConnectHeader[1] = 10 + 2 + mqttClientId.length() + 2 + mqttUsername.length() + 2 + mqttPassword.length();
     int i;
     for (i = 0; i < 12; i++)
     {
-        pConnectRequest[i] = MQTTConnectHeader[i];
+        pConnectRequest[i] = mqttConnectHeader[i];
     }
     pConnectRequest[12] = 0;
-    pConnectRequest[13] = mqtt_clentID.length();
-    for (i = 0; i < mqtt_clentID.length(); i++)
+    pConnectRequest[13] = mqttClientId.length();
+    for (i = 0; i < mqttClientId.length(); i++)
     {
-        pConnectRequest[i + 12 + 2] = (uint8_t)mqtt_clentID.charAt(i);
+        pConnectRequest[i + 12 + 2] = (uint8_t)mqttClientId.charAt(i);
     }
-    pConnectRequest[12 + 2 + mqtt_clentID.length()] = 0;
-    pConnectRequest[12 + 2 + mqtt_clentID.length() + 1] = mqtt_username.length();
-    for (i = 0; i < mqtt_username.length(); i++)
+    pConnectRequest[12 + 2 + mqttClientId.length()] = 0;
+    pConnectRequest[12 + 2 + mqttClientId.length() + 1] = mqttUsername.length();
+    for (i = 0; i < mqttUsername.length(); i++)
     {
-        pConnectRequest[i + 12 + 2 + mqtt_clentID.length() + 2] = (uint8_t)mqtt_username.charAt(i);
+        pConnectRequest[i + 12 + 2 + mqttClientId.length() + 2] = (uint8_t)mqttUsername.charAt(i);
     }
-    pConnectRequest[12 + 2 + mqtt_clentID.length() + 2 + mqtt_username.length()] = 0;
-    pConnectRequest[12 + 2 + mqtt_clentID.length() + 2 + mqtt_username.length() + 1] = mqtt_password.length();
-    for (i = 0; i < mqtt_password.length(); i++)
+    pConnectRequest[12 + 2 + mqttClientId.length() + 2 + mqttUsername.length()] = 0;
+    pConnectRequest[12 + 2 + mqttClientId.length() + 2 + mqttUsername.length() + 1] = mqttPassword.length();
+    for (i = 0; i < mqttPassword.length(); i++)
     {
-        pConnectRequest[i + 12 + 2 + mqtt_clentID.length() + 2 + mqtt_username.length() + 2] = (uint8_t)mqtt_password.charAt(i);
+        pConnectRequest[i + 12 + 2 + mqttClientId.length() + 2 + mqttUsername.length() + 2] = (uint8_t)mqttPassword.charAt(i);
     }
-    webSocket.sendBIN(pConnectRequest, MQTTConnectHeader[1] + 2);
+    webSocket.sendBIN(pConnectRequest, mqttConnectHeader[1] + 2);
 }
 
-byte stack_exe_used = 0;
+byte stackExeUsed = 0;
 #define STACK_EXE_DEPTH 6
-String Stack_Execute[2][STACK_EXE_DEPTH];
+String stackExecute[2][STACK_EXE_DEPTH];
 
-void publishStackPush(String str_topic, String str_payload)
+void publishStackPush(String topicString, String payloadString)
 {
-    if (WS_MQTT_status == MQTT_CONNECTED && str_topic.length() < 64 && str_payload.length() < 256)
+    if (WS_MQTT_STATUS == MQTT_CONNECTED && topicString.length() < 64 && payloadString.length() < 256)
     {
         for (byte i = STACK_EXE_DEPTH - 1; i >= 0; i--)
         {
-            if (Stack_Execute[0][i].length() == 0 && Stack_Execute[1][i].length() == 0)
+            if (stackExecute[0][i].length() == 0 && stackExecute[1][i].length() == 0)
             {
-                Stack_Execute[0][i] = str_topic;
-                Stack_Execute[1][i] = str_payload;
-                stack_exe_used++;
+                stackExecute[0][i] = topicString;
+                stackExecute[1][i] = payloadString;
+                stackExeUsed++;
                 break;
             }
         }
@@ -92,89 +92,89 @@ void publishStackPush(String str_topic, String str_payload)
 
 void publishStackPop()
 {
-    if ((Stack_Execute[0][STACK_EXE_DEPTH - 1].length() > 0 && Stack_Execute[1][STACK_EXE_DEPTH - 1].length() > 0))
+    if ((stackExecute[0][STACK_EXE_DEPTH - 1].length() > 0 && stackExecute[1][STACK_EXE_DEPTH - 1].length() > 0))
     {
 #if defined(DEVMODE)
         Serial.print("Topic: ");
-        Serial.println(Stack_Execute[0][STACK_EXE_DEPTH - 1].c_str());
+        Serial.println(stackExecute[0][STACK_EXE_DEPTH - 1].c_str());
         Serial.print("Payload: ");
-        Serial.println(Stack_Execute[1][STACK_EXE_DEPTH - 1].c_str());
+        Serial.println(stackExecute[1][STACK_EXE_DEPTH - 1].c_str());
 #endif
-        if (Stack_Execute[1][STACK_EXE_DEPTH - 1] == "SUBSCRIBE")
+        if (stackExecute[1][STACK_EXE_DEPTH - 1] == "SUBSCRIBE")
         {
             pSubscribeRequest[0] = 130;
-            pSubscribeRequest[1] = 5 + Stack_Execute[0][STACK_EXE_DEPTH - 1].length();
+            pSubscribeRequest[1] = 5 + stackExecute[0][STACK_EXE_DEPTH - 1].length();
             pSubscribeRequest[2] = 0;
-            pSubscribeRequest[3] = MQTT_package_id;
+            pSubscribeRequest[3] = mqttPackageId;
             pSubscribeRequest[4] = 0;
-            pSubscribeRequest[5] = Stack_Execute[0][STACK_EXE_DEPTH - 1].length();
-            for (int i = 0; i < Stack_Execute[0][STACK_EXE_DEPTH - 1].length(); i++)
+            pSubscribeRequest[5] = stackExecute[0][STACK_EXE_DEPTH - 1].length();
+            for (int i = 0; i < stackExecute[0][STACK_EXE_DEPTH - 1].length(); i++)
             {
-                pSubscribeRequest[i + 6] = (uint8_t)Stack_Execute[0][STACK_EXE_DEPTH - 1].charAt(i);
+                pSubscribeRequest[i + 6] = (uint8_t)stackExecute[0][STACK_EXE_DEPTH - 1].charAt(i);
             }
-            pSubscribeRequest[Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + 6] = 0; // QOS=0
-            webSocket.sendBIN(pSubscribeRequest, Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + 6 + 1);
+            pSubscribeRequest[stackExecute[0][STACK_EXE_DEPTH - 1].length() + 6] = 0; // QOS=0
+            webSocket.sendBIN(pSubscribeRequest, stackExecute[0][STACK_EXE_DEPTH - 1].length() + 6 + 1);
         }
-        else if (Stack_Execute[1][STACK_EXE_DEPTH - 1] == "UNSUBSCRIBE")
+        else if (stackExecute[1][STACK_EXE_DEPTH - 1] == "UNSUBSCRIBE")
         {
 
             pUnSubscribeRequest[0] = 162;
-            pUnSubscribeRequest[1] = 4 + Stack_Execute[0][STACK_EXE_DEPTH - 1].length();
+            pUnSubscribeRequest[1] = 4 + stackExecute[0][STACK_EXE_DEPTH - 1].length();
             pUnSubscribeRequest[2] = 0;
-            pUnSubscribeRequest[3] = MQTT_package_id;
+            pUnSubscribeRequest[3] = mqttPackageId;
             pUnSubscribeRequest[4] = 0;
-            pUnSubscribeRequest[5] = Stack_Execute[0][STACK_EXE_DEPTH - 1].length();
-            for (int i = 0; i < Stack_Execute[0][STACK_EXE_DEPTH - 1].length(); i++)
+            pUnSubscribeRequest[5] = stackExecute[0][STACK_EXE_DEPTH - 1].length();
+            for (int i = 0; i < stackExecute[0][STACK_EXE_DEPTH - 1].length(); i++)
             {
-                pUnSubscribeRequest[i + 6] = (uint8_t)Stack_Execute[0][STACK_EXE_DEPTH - 1].charAt(i);
+                pUnSubscribeRequest[i + 6] = (uint8_t)stackExecute[0][STACK_EXE_DEPTH - 1].charAt(i);
             }
-            webSocket.sendBIN(pUnSubscribeRequest, Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + 6);
-            MQTT_package_id++;
+            webSocket.sendBIN(pUnSubscribeRequest, stackExecute[0][STACK_EXE_DEPTH - 1].length() + 6);
+            mqttPackageId++;
         }
         else
         {
-            if (Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + Stack_Execute[1][STACK_EXE_DEPTH - 1].length() + 2 > 127)
+            if (stackExecute[0][STACK_EXE_DEPTH - 1].length() + stackExecute[1][STACK_EXE_DEPTH - 1].length() + 2 > 127)
             {
                 pPublishRequest[0] = 48;
-                pPublishRequest[1] = (uint8_t)(Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + Stack_Execute[1][STACK_EXE_DEPTH - 1].length() + 2) - ((Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + Stack_Execute[1][STACK_EXE_DEPTH - 1].length() + 2) / 128 - 1) * 128;
-                pPublishRequest[2] = (uint8_t)(Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + Stack_Execute[1][STACK_EXE_DEPTH - 1].length() + 2) / 128;
+                pPublishRequest[1] = (uint8_t)(stackExecute[0][STACK_EXE_DEPTH - 1].length() + stackExecute[1][STACK_EXE_DEPTH - 1].length() + 2) - ((stackExecute[0][STACK_EXE_DEPTH - 1].length() + stackExecute[1][STACK_EXE_DEPTH - 1].length() + 2) / 128 - 1) * 128;
+                pPublishRequest[2] = (uint8_t)(stackExecute[0][STACK_EXE_DEPTH - 1].length() + stackExecute[1][STACK_EXE_DEPTH - 1].length() + 2) / 128;
                 pPublishRequest[3] = 0;
-                pPublishRequest[4] = (uint8_t)Stack_Execute[0][STACK_EXE_DEPTH - 1].length();
-                for (int i = 0; i < Stack_Execute[0][STACK_EXE_DEPTH - 1].length(); i++)
+                pPublishRequest[4] = (uint8_t)stackExecute[0][STACK_EXE_DEPTH - 1].length();
+                for (int i = 0; i < stackExecute[0][STACK_EXE_DEPTH - 1].length(); i++)
                 {
-                    pPublishRequest[i + 5] = (uint8_t)Stack_Execute[0][STACK_EXE_DEPTH - 1].charAt(i);
+                    pPublishRequest[i + 5] = (uint8_t)stackExecute[0][STACK_EXE_DEPTH - 1].charAt(i);
                 }
-                for (int i = 0; i < Stack_Execute[1][STACK_EXE_DEPTH - 1].length(); i++)
+                for (int i = 0; i < stackExecute[1][STACK_EXE_DEPTH - 1].length(); i++)
                 {
-                    pPublishRequest[i + 5 + Stack_Execute[0][STACK_EXE_DEPTH - 1].length()] = (uint8_t)Stack_Execute[1][STACK_EXE_DEPTH - 1].charAt(i);
+                    pPublishRequest[i + 5 + stackExecute[0][STACK_EXE_DEPTH - 1].length()] = (uint8_t)stackExecute[1][STACK_EXE_DEPTH - 1].charAt(i);
                 }
-                webSocket.sendBIN(pPublishRequest, Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + Stack_Execute[1][STACK_EXE_DEPTH - 1].length() + 5);
+                webSocket.sendBIN(pPublishRequest, stackExecute[0][STACK_EXE_DEPTH - 1].length() + stackExecute[1][STACK_EXE_DEPTH - 1].length() + 5);
             }
             else
             {
                 pPublishRequest[0] = 48;
-                pPublishRequest[1] = (uint8_t)Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + Stack_Execute[1][STACK_EXE_DEPTH - 1].length() + 2;
+                pPublishRequest[1] = (uint8_t)stackExecute[0][STACK_EXE_DEPTH - 1].length() + stackExecute[1][STACK_EXE_DEPTH - 1].length() + 2;
                 pPublishRequest[2] = 0;
-                pPublishRequest[3] = (uint8_t)Stack_Execute[0][STACK_EXE_DEPTH - 1].length();
-                for (int i = 0; i < Stack_Execute[0][STACK_EXE_DEPTH - 1].length(); i++)
+                pPublishRequest[3] = (uint8_t)stackExecute[0][STACK_EXE_DEPTH - 1].length();
+                for (int i = 0; i < stackExecute[0][STACK_EXE_DEPTH - 1].length(); i++)
                 {
-                    pPublishRequest[i + 4] = (uint8_t)Stack_Execute[0][STACK_EXE_DEPTH - 1].charAt(i);
+                    pPublishRequest[i + 4] = (uint8_t)stackExecute[0][STACK_EXE_DEPTH - 1].charAt(i);
                 }
-                for (int i = 0; i < Stack_Execute[1][STACK_EXE_DEPTH - 1].length(); i++)
+                for (int i = 0; i < stackExecute[1][STACK_EXE_DEPTH - 1].length(); i++)
                 {
-                    pPublishRequest[i + 4 + Stack_Execute[0][STACK_EXE_DEPTH - 1].length()] = (uint8_t)Stack_Execute[1][STACK_EXE_DEPTH - 1].charAt(i);
+                    pPublishRequest[i + 4 + stackExecute[0][STACK_EXE_DEPTH - 1].length()] = (uint8_t)stackExecute[1][STACK_EXE_DEPTH - 1].charAt(i);
                 }
-                webSocket.sendBIN(pPublishRequest, Stack_Execute[0][STACK_EXE_DEPTH - 1].length() + Stack_Execute[1][STACK_EXE_DEPTH - 1].length() + 4);
+                webSocket.sendBIN(pPublishRequest, stackExecute[0][STACK_EXE_DEPTH - 1].length() + stackExecute[1][STACK_EXE_DEPTH - 1].length() + 4);
             }
         }
         for (byte i = STACK_EXE_DEPTH - 1; i > 0; i--)
         {
-            Stack_Execute[0][i] = Stack_Execute[0][i - 1];
-            Stack_Execute[1][i] = Stack_Execute[1][i - 1];
+            stackExecute[0][i] = stackExecute[0][i - 1];
+            stackExecute[1][i] = stackExecute[1][i - 1];
         }
-        Stack_Execute[0][0] = "";
-        Stack_Execute[1][0] = "";
-        stack_exe_used--;
+        stackExecute[0][0] = "";
+        stackExecute[1][0] = "";
+        stackExeUsed--;
     }
 }
 
@@ -187,53 +187,53 @@ void publishStackPop()
 // #endif
 // }
 
-void mqttCallback(uint8_t *MSG_payload, size_t MSG_length)
+void mqttCallback(uint8_t *messagePayload, size_t messageLength)
 {
-    if (WS_MQTT_status == MQTT_CONNECTED)
+    if (WS_MQTT_STATUS == MQTT_CONNECTED)
     {
-        if (MSG_length == 2)
+        if (messageLength == 2)
         {
-            if (MSG_payload[0] == 208 && MSG_payload[1] == 0)
+            if (messagePayload[0] == 208 && messagePayload[1] == 0)
             {
-                mqtt_feedback_count = 0;
+                mqttFeedbackCount = 0;
                 // Serial.println("MQTT ping response");
             }
         }
-        if (MSG_length > 4)
+        if (messageLength > 4)
         {
-            if (MSG_payload[0] == 48)
+            if (messagePayload[0] == 48)
             {
-                if (MSG_length > 127 + 2)
+                if (messageLength > 127 + 2)
                 {
-                    if ((MSG_payload[2] - 1) * 128 + MSG_payload[1] + 3 == MSG_length)
+                    if ((messagePayload[2] - 1) * 128 + messagePayload[1] + 3 == messageLength)
                     {
-                        char mqtt_payload[MSG_length - 5 - MSG_payload[4]];
-                        for (int i = 5 + MSG_payload[4]; i < MSG_length; i++)
+                        char mqttPayload[messageLength - 5 - messagePayload[4]];
+                        for (int i = 5 + messagePayload[4]; i < messageLength; i++)
                         {
-                            mqtt_payload[i - 5 - MSG_payload[4]] = (char)MSG_payload[i];
+                            mqttPayload[i - 5 - messagePayload[4]] = (char)messagePayload[i];
                         }
-                        mqttPayloadProcess(mqtt_payload, MSG_length - 5 - MSG_payload[4]);
+                        mqttPayloadProcess(mqttPayload, messageLength - 5 - messagePayload[4]);
                     }
                 }
-                else if (MSG_payload[1] + 2 == MSG_length)
+                else if (messagePayload[1] + 2 == messageLength)
                 {
-                    char mqtt_payload[MSG_length - 4 - MSG_payload[3]];
-                    for (int i = 4 + MSG_payload[3]; i < MSG_length; i++)
+                    char mqttPayload[messageLength - 4 - messagePayload[3]];
+                    for (int i = 4 + messagePayload[3]; i < messageLength; i++)
                     {
-                        mqtt_payload[i - 4 - MSG_payload[3]] = (char)MSG_payload[i];
+                        mqttPayload[i - 4 - messagePayload[3]] = (char)messagePayload[i];
                     }
-                    mqttPayloadProcess(mqtt_payload, MSG_length - 4 - MSG_payload[3]);
+                    mqttPayloadProcess(mqttPayload, messageLength - 4 - messagePayload[3]);
                 }
             }
         }
     }
-    else if (WS_MQTT_status == WS_CONNECTED)
+    else if (WS_MQTT_STATUS == WS_CONNECTED)
     {
-        if (MSG_length == 4)
+        if (messageLength == 4)
         {
-            if (MSG_payload[0] == 32 && MSG_payload[3] == 0)
+            if (messagePayload[0] == 32 && messagePayload[3] == 0)
             {
-                WS_MQTT_status = MQTT_CONNECTED;
+                WS_MQTT_STATUS = MQTT_CONNECTED;
                 publishStackPush(topic, "SUBSCRIBE");
 #if defined(DEVMODE)
                 Serial.println("MQTT connected");
@@ -246,48 +246,48 @@ void mqttCallback(uint8_t *MSG_payload, size_t MSG_length)
 void mqttLoop()
 {
     webSocket.loop();
-    if (WS_MQTT_status == MQTT_CONNECTED)
+    if (WS_MQTT_STATUS == MQTT_CONNECTED)
     {
         publishStackPop();
         if (millis() - lastTimeMQTTActive > MQTT_PING_INTERVAL)
         {
-            if (mqtt_feedback_count > 2)
+            if (mqttFeedbackCount > 2)
             {
-                WS_MQTT_status = WS_DISCONNECTED;
+                WS_MQTT_STATUS = WS_DISCONNECTED;
                 webSocket.disconnect();
-                mqtt_feedback_count = 0;
+                mqttFeedbackCount = 0;
                 lastTimeMQTTConnect = millis();
             }
             else
             {
                 webSocket.sendBIN(bufferMQTTPing, 2);
                 // Serial.print("MQTT ping request with feedback count ");
-                // Serial.println(mqtt_feedback_count);
-                mqtt_feedback_count++;
+                // Serial.println(mqttFeedbackCount);
+                mqttFeedbackCount++;
             }
             lastTimeMQTTActive = millis();
         }
     }
-    else if (WS_MQTT_status == WS_CONNECTED)
+    else if (WS_MQTT_STATUS == WS_CONNECTED)
     {
         if ((millis() - lastTimeMQTTConnect) > MQTT_CONNECT_INTERVAL)
         {
-            mqttConnect(clientName, MQTT_ALIVE_TIME, MQTT_username, MQTT_password);
+            mqttConnect(CLIENT_NAME, MQTT_ALIVE_TIME, MQTT_USERNAME, MQTT_PASSWORD);
             lastTimeMQTTConnect = millis();
 #if defined(DEVMODE)
-            Serial.println("Connected to the broker as " + clientName);
+            Serial.println("Connected to the broker as " + CLIENT_NAME);
 #endif
         }
     }
 }
 
-void wsCallbackEvent(WStype_t MSG_type, uint8_t *MSG_payload, size_t MSG_length)
+void wsCallbackEvent(WStype_t messageType, uint8_t *messagePayload, size_t messageLength)
 {
-    switch (MSG_type)
+    switch (messageType)
     {
     case WStype_DISCONNECTED:
     {
-        WS_MQTT_status = WS_DISCONNECTED;
+        WS_MQTT_STATUS = WS_DISCONNECTED;
 #if defined(DEVMODE)
         Serial.println("Websocket disconnected");
 #endif
@@ -296,7 +296,7 @@ void wsCallbackEvent(WStype_t MSG_type, uint8_t *MSG_payload, size_t MSG_length)
     }
     case WStype_CONNECTED:
     {
-        WS_MQTT_status = WS_CONNECTED;
+        WS_MQTT_STATUS = WS_CONNECTED;
 #if defined(DEVMODE)
         Serial.println("Websocket connected");
 #endif
@@ -306,31 +306,36 @@ void wsCallbackEvent(WStype_t MSG_type, uint8_t *MSG_payload, size_t MSG_length)
         break;
     case WStype_BIN:
     {
-        mqttCallback(MSG_payload, MSG_length);
+        mqttCallback(messagePayload, messageLength);
         break;
     }
     }
 }
 
-void mqttSetup(String mqtt_server, int mqtt_port, int mqtt_reconnect_interval, char *mqtt_domain)
+void mqttSetup(String mqttServer, int mqttPort, int mqttReconnectInterval, char *mqttDomain)
 {
-    webSocket.setReconnectInterval(mqtt_reconnect_interval);
-    webSocket.begin(mqtt_server, mqtt_port, mqtt_domain);
+    webSocket.setReconnectInterval(mqttReconnectInterval);
+    webSocket.begin(mqttServer, mqttPort, mqttDomain);
     webSocket.onEvent(wsCallbackEvent);
-    WS_MQTT_status = WS_DISCONNECTED;
+    WS_MQTT_STATUS = WS_DISCONNECTED;
+}
+
+void setClientName(String clientName)
+{
+    CLIENT_NAME = clientName;
 }
 
 void setWifiConnected()
 {
-    WS_MQTT_status = WIFI_CONNECTED;
+    WS_MQTT_STATUS = WIFI_CONNECTED;
 }
 
 bool isWifiConnected()
 {
-    return WS_MQTT_status >= WS_DISCONNECTED;
+    return WS_MQTT_STATUS >= WS_DISCONNECTED;
 }
 
 bool isMqttConnected()
 {
-    return WS_MQTT_status == MQTT_CONNECTED;
+    return WS_MQTT_STATUS == MQTT_CONNECTED;
 }

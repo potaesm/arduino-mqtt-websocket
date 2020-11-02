@@ -7,9 +7,9 @@ String topic = "test/greeting";
 char *wifiSSID = "POTAE";
 char *wifiPassword = "aabbccdd";
 
-const static String wsServer = "node-js-mqtt-broker.herokuapp.com";
-const int wsPort = 80;
-const static char* wsDomain = "/mqtt";
+const static String mqttServer = "node-js-mqtt-broker.herokuapp.com";
+const int mqttPort = 80;
+const static char* mqttDomain = "/mqtt";
 
 long lastTimeMQTTPublish = 0;
 
@@ -29,19 +29,20 @@ void setup() {
   connectWifi(wifiSSID, wifiPassword);
   setWifiConnected();
   checkInternet(wifiSSID, wifiPassword);
-  mqttSetup(wsServer, wsPort, 15000, (char*)wsDomain);
+  setClientName("SimpleClient");
+  mqttSetup(mqttServer, mqttPort, 15000, (char*)mqttDomain);
 }
 
 void loop() {
   if (isWifiConnected()) {
     mqttLoop();
   }
-//  if (isMqttConnected()) {
-//    if (millis() - lastTimeMQTTPublish > 5000) {
-//      Json json;
-//      json.addIntegerProperty("debug", millis());
-//      publishStackPush(topic, json.getJson());
-//      lastTimeMQTTPublish = millis();
-//    }
-//  }
+  if (isMqttConnected()) {
+    if (millis() - lastTimeMQTTPublish > 5000) {
+      Json json;
+      json.addIntegerProperty("debug", millis());
+      publishStackPush(topic, json.getJson());
+      lastTimeMQTTPublish = millis();
+    }
+  }
 }
