@@ -27,6 +27,7 @@ void setup() {
   Serial.begin(115200);
   Serial.setTimeout(5);
   connectWifi(wifiSSID, wifiPassword);
+  setWifiConnected();
   checkInternet(wifiSSID, wifiPassword);
   mqttSetup(wsServer, wsPort, 15000, (char*)wsDomain);
 }
