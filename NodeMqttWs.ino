@@ -2,7 +2,6 @@
 
 #include "JsonMapper.h"
 
-String clientNamePrefix = "ArduinoClient-";
 String topic = "test/greeting";
 
 char *wifiSSID = "POTAE";
@@ -28,7 +27,7 @@ void setup() {
   Serial.begin(115200);
   Serial.setTimeout(5);
   connectWifi(wifiSSID, wifiPassword);
-  checkInternet();
+  checkInternet(wifiSSID, wifiPassword);
   mqttSetup(wsServer, wsPort, 15000, (char*)wsDomain);
 }
 

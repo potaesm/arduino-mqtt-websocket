@@ -1,14 +1,13 @@
 #include "Arduino.h"
 #include "Hash.h"
 #include "WebSocketsClient.h"
+#include "SimpleWifi.h"
+
+String clientName = "ESP8266Client";
 
 const static String MQTT_username = "MQTT_username";
 const static String MQTT_password = "MQTT_password";
 const static int MQTT_ALIVE_TIME = 30;
-
-WiFiClient wifiClient;
-char *connectionTestHost = "google.com";
-unsigned int connectionTestPort = 80;
 
 #define MQTT_PING_INTERVAL 10000
 #define MQTT_CONNECT_INTERVAL 10000
@@ -39,92 +38,6 @@ static uint8_t pSubscribeRequest[MQTT_TOPIC_LENGTH_MAX + 7];
 static uint8_t pUnSubscribeRequest[MQTT_TOPIC_LENGTH_MAX + 6];
 static uint8_t pPublishRequest[MQTT_TOPIC_LENGTH_MAX + MQTT_PAYLOAD_LENGTH_MAX + 5];
 static uint8_t pConnectRequest[128];
-
-void connectWifi(char *wifiSSID, char *wifiPassword)
-{
-    WiFi.mode(WIFI_OFF);
-    delay(1000);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(wifiSSID, wifiPassword);
-    byte wifi_connect_count = 0;
-#if defined(DEVMODE)
-    Serial.println("Connecting");
-#endif
-    while (WiFi.status() != WL_CONNECTED)
-    {
-#if defined(DEVMODE)
-        Serial.print(".");
-#endif
-        delay(1000);
-        if (wifi_connect_count > 20)
-        {
-            delay(5000);
-            ESP.reset();
-        }
-    }
-    WS_MQTT_status = WIFI_CONNECTED;
-#if defined(DEVMODE)
-    Serial.println("");
-    Serial.print("Connected to ");
-    Serial.println(wifiSSID);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-#endif
-}
-
-void checkInternet()
-{
-    bool network_check = false;
-    if (!wifiClient.connect(connectionTestHost, connectionTestPort))
-    {
-        return;
-    }
-    String request_headers = String("GET ") + "/api/user" + " HTTP/1.1\r\n" +
-                             "Host: " + connectionTestHost + "\r\n" +
-                             "Accept: " + "application/json" + "\r\n" +
-                             "Connection: close\r\n\r\n";
-    wifiClient.print(request_headers);
-    unsigned long api_timeout = millis();
-    while (!wifiClient.available())
-    {
-        if (millis() - api_timeout > 5000)
-        {
-            wifiClient.stop();
-            return;
-        }
-    }
-    String respond_line;
-    while (wifiClient.connected())
-    {
-        respond_line = wifiClient.readStringUntil('\n');
-        if (respond_line == "\r")
-        {
-            network_check = true;
-#if defined(DEVMODE)
-            Serial.println("Internet is OK");
-#endif
-            break;
-        }
-    }
-    if (!network_check)
-    {
-        WiFi.disconnect();
-        delay(2500);
-        WiFi.begin(wifiSSID, wifiPassword);
-        byte wifi_connect_count = 0;
-        while (WiFi.status() != WL_CONNECTED)
-        {
-            delay(1000);
-            wifi_connect_count++;
-            // 20 second timeout
-            if (wifi_connect_count > 20)
-            {
-                delay(5000);
-                ESP.reset();
-            }
-        }
-    }
-}
 
 void mqttConnect(String mqtt_clentID, uint8_t mqtt_alive_time, String mqtt_username, String mqtt_password)
 {
@@ -359,7 +272,6 @@ void mqttLoop()
     {
         if ((millis() - lastTimeMQTTConnect) > MQTT_CONNECT_INTERVAL)
         {
-            String clientName = clientNamePrefix + WiFi.macAddress();
             mqttConnect(clientName, MQTT_ALIVE_TIME, MQTT_username, MQTT_password);
             lastTimeMQTTConnect = millis();
 #if defined(DEVMODE)
@@ -379,7 +291,7 @@ void wsCallbackEvent(WStype_t MSG_type, uint8_t *MSG_payload, size_t MSG_length)
 #if defined(DEVMODE)
         Serial.println("Websocket disconnected");
 #endif
-        checkInternet();
+        checkInternet(wifiSSID, wifiPassword);
         break;
     }
     case WStype_CONNECTED:
@@ -406,6 +318,11 @@ void mqttSetup(String mqtt_server, int mqtt_port, int mqtt_reconnect_interval, c
     webSocket.begin(mqtt_server, mqtt_port, mqtt_domain);
     webSocket.onEvent(wsCallbackEvent);
     WS_MQTT_status = WS_DISCONNECTED;
+}
+
+void setWifiConnected()
+{
+    WS_MQTT_status = WIFI_CONNECTED;
 }
 
 bool isWifiConnected()
