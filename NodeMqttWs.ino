@@ -17,9 +17,12 @@ void mqttPayloadProcess(char* mqttPayload, int mqttPayloadLength) {
   Serial.print("mqttPayload: >>");
   Serial.print(mqttPayload);
   Serial.println("<<");
-//  String debug = getJsonProperty(mqttPayload, "debug");
-//  Serial.print("debug: ");
-//  Serial.println(debug);
+  Json json;
+  json.setJson(String(mqttPayload));
+  Serial.print("parsed json: ");
+  Serial.println(json.getJson());
+  Serial.print("debug: ");
+  Serial.println(getJsonProperty(json.getJson(), "debug"));
 }
 
 #include "MqttWebsocket.h"
@@ -41,6 +44,7 @@ void loop() {
     if (millis() - lastTimeMQTTPublish > 5000) {
       Json json;
       json.addIntegerProperty("debug", millis());
+      json.addProperty("nested", json.getJson());
       publishStackPush(topic, json.getJson());
       lastTimeMQTTPublish = millis();
     }
