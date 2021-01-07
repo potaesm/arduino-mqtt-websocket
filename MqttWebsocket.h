@@ -3,16 +3,13 @@
 #include "WebSocketsClient.h"
 #include "SimpleWifi.h"
 
-String CLIENT_NAME = "ESP8266Client";
-
-const static String MQTT_USERNAME = "MQTT_USERNAME";
-const static String MQTT_PASSWORD = "MQTT_PASSWORD";
-const static int MQTT_ALIVE_TIME = 30;
+String mqttClientName = "ESP8266Client";
+String mqttUsername = "MQTT_USERNAME";
+String mqttPassword = "MQTT_PASSWORD";
+int mqttAliveTime = 30;
 
 #define MQTT_PING_INTERVAL 10000
 #define MQTT_CONNECT_INTERVAL 10000
-#define WIFI_CHECK_INTERVAL 10000
-#define BATTERY_CHECK_INTERVAL 10000
 
 #define MQTT_TOPIC_LENGTH_MAX 64
 #define MQTT_PAYLOAD_LENGTH_MAX 256
@@ -272,10 +269,14 @@ void mqttLoop()
     {
         if ((millis() - lastTimeMQTTConnect) > MQTT_CONNECT_INTERVAL)
         {
-            mqttConnect(CLIENT_NAME, MQTT_ALIVE_TIME, MQTT_USERNAME, MQTT_PASSWORD);
+            String MQTT_CLIENT_NAME = mqttClientName;
+            const static String MQTT_USERNAME = mqttUsername;
+            const static String MQTT_PASSWORD = mqttPassword;
+            const static int MQTT_ALIVE_TIME = mqttAliveTime;
+            mqttConnect(MQTT_CLIENT_NAME, MQTT_ALIVE_TIME, MQTT_USERNAME, MQTT_PASSWORD);
             lastTimeMQTTConnect = millis();
 #if defined(DEVMODE)
-            Serial.println("Connected to the broker as " + CLIENT_NAME);
+            Serial.println("Connecting to the broker as " + MQTT_CLIENT_NAME);
 #endif
         }
     }
@@ -320,9 +321,15 @@ void mqttSetup(String mqttServer, int mqttPort, int mqttReconnectInterval, char 
     WS_MQTT_STATUS = WS_DISCONNECTED;
 }
 
-void setClientName(String clientName)
+void setMqttAuthentication(String username, String password)
 {
-    CLIENT_NAME = clientName;
+    mqttUsername = username;
+    mqttPassword = password;
+}
+
+void setMqttClientName(String clientName)
+{
+    mqttClientName = clientName;
 }
 
 void setWifiConnected()
