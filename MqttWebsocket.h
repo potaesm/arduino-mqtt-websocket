@@ -3,7 +3,9 @@
 #include "WebSocketsClient.h"
 #include "SimpleWifi.h"
 
-String mqttClientName = "ESP8266Client";
+** #define DEVMODE 1 **
+
+String mqttClientName = "ESPClient";
 String mqttUsername = "MQTT_USERNAME";
 String mqttPassword = "MQTT_PASSWORD";
 int mqttAliveTime = 30;
