@@ -3,7 +3,7 @@
 #include "WebSocketsClient.h"
 #include "SimpleWifi.h"
 
-// #define DEVMODE 1
+#define DEVMODE 1
 
 String mqttClientName = "ESPClient";
 String mqttUsername = "MQTT_USERNAME";
@@ -310,6 +310,10 @@ void wsCallbackEvent(WStype_t messageType, uint8_t *messagePayload, size_t messa
     case WStype_BIN:
     {
         mqttCallback(messagePayload, messageLength);
+        break;
+    }
+    default:
+    {
         break;
     }
     }
