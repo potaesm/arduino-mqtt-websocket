@@ -338,12 +338,12 @@ void setMqttClientName(String clientName)
     mqttClientName = clientName;
 }
 
-void setWifiConnected()
+void setMqttWifiConnected()
 {
     WS_MQTT_STATUS = WIFI_CONNECTED;
 }
 
-bool isWifiConnected()
+bool isMqttWifiConnected()
 {
     return WS_MQTT_STATUS >= WS_DISCONNECTED;
 }
