@@ -3,7 +3,7 @@
 #include "WebSocketsClient.h"
 #include "SimpleWifi.h"
 
-** #define DEVMODE 1 **
+// #define DEVMODE 1
 
 String mqttClientName = "ESPClient";
 String mqttUsername = "MQTT_USERNAME";
