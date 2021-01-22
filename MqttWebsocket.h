@@ -5,10 +5,11 @@
 
 #define DEVMODE 1
 
+String mqttTopic = "esp/topic";
 String mqttClientName = "ESPClient";
 String mqttUsername = "MQTT_USERNAME";
 String mqttPassword = "MQTT_PASSWORD";
-int mqttAliveTime = 30;
+uint8_t mqttAliveTime = 30;
 
 #define MQTT_PING_INTERVAL 10000
 #define MQTT_CONNECT_INTERVAL 10000
@@ -233,7 +234,7 @@ void mqttCallback(uint8_t *messagePayload, size_t messageLength)
             if (messagePayload[0] == 32 && messagePayload[3] == 0)
             {
                 WS_MQTT_STATUS = MQTT_CONNECTED;
-                publishStackPush(topic, "SUBSCRIBE");
+                publishStackPush(mqttTopic, "SUBSCRIBE");
 #if defined(DEVMODE)
                 Serial.println("MQTT connected");
 #endif
@@ -271,14 +272,10 @@ void mqttLoop()
     {
         if ((millis() - lastTimeMQTTConnect) > MQTT_CONNECT_INTERVAL)
         {
-            String MQTT_CLIENT_ID = mqttClientName;
-            String MQTT_USERNAME = mqttUsername;
-            String MQTT_PASSWORD = mqttPassword;
-            uint8_t MQTT_ALIVE_TIME = mqttAliveTime;
-            mqttConnect(MQTT_CLIENT_ID, MQTT_ALIVE_TIME, MQTT_USERNAME, MQTT_PASSWORD);
+            mqttConnect(mqttClientName, mqttAliveTime, mqttUsername, mqttPassword);
             lastTimeMQTTConnect = millis();
 #if defined(DEVMODE)
-            Serial.println("Connecting to the broker as " + MQTT_CLIENT_ID);
+            Serial.println("Connecting to the broker as " + mqttClientName);
 #endif
         }
     }
@@ -319,12 +316,17 @@ void wsCallbackEvent(WStype_t messageType, uint8_t *messagePayload, size_t messa
     }
 }
 
-void mqttSetup(String mqttServer, int mqttPort, int mqttReconnectInterval, char *mqttDomain)
+void mqttSetup(char *mqttServer, int mqttPort, int mqttReconnectInterval, char *mqttDomain)
 {
     webSocket.setReconnectInterval(mqttReconnectInterval);
     webSocket.begin(mqttServer, mqttPort, mqttDomain);
     webSocket.onEvent(wsCallbackEvent);
     WS_MQTT_STATUS = WS_DISCONNECTED;
+}
+
+void setMqttTopic(String topic)
+{
+    mqttTopic = topic;
 }
 
 void setMqttAuthentication(String username, String password)
