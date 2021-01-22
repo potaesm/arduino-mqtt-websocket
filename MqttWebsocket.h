@@ -271,14 +271,14 @@ void mqttLoop()
     {
         if ((millis() - lastTimeMQTTConnect) > MQTT_CONNECT_INTERVAL)
         {
-            String MQTT_CLIENT_NAME = mqttClientName;
-            const static String MQTT_USERNAME = mqttUsername;
-            const static String MQTT_PASSWORD = mqttPassword;
-            const static int MQTT_ALIVE_TIME = mqttAliveTime;
-            mqttConnect(MQTT_CLIENT_NAME, MQTT_ALIVE_TIME, MQTT_USERNAME, MQTT_PASSWORD);
+            String MQTT_CLIENT_ID = mqttClientName;
+            String MQTT_USERNAME = mqttUsername;
+            String MQTT_PASSWORD = mqttPassword;
+            uint8_t MQTT_ALIVE_TIME = mqttAliveTime;
+            mqttConnect(MQTT_CLIENT_ID, MQTT_ALIVE_TIME, MQTT_USERNAME, MQTT_PASSWORD);
             lastTimeMQTTConnect = millis();
 #if defined(DEVMODE)
-            Serial.println("Connecting to the broker as " + MQTT_CLIENT_NAME);
+            Serial.println("Connecting to the broker as " + MQTT_CLIENT_ID);
 #endif
         }
     }
