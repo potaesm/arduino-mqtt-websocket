@@ -5,11 +5,12 @@
 
 #define DEVMODE 1
 
-String mqttTopic = "esp/topic";
-String mqttClientName = "ESPClient";
-String mqttUsername = "MQTT_USERNAME";
-String mqttPassword = "MQTT_PASSWORD";
+char* mqttClientId = "ESPClient";
+char* mqttUsername = "MQTT_USERNAME";
+char* mqttPassword = "MQTT_PASSWORD";
 uint8_t mqttAliveTime = 30;
+
+String mqttTopic = "esp/topic";
 
 #define MQTT_PING_INTERVAL 10000
 #define MQTT_CONNECT_INTERVAL 10000
@@ -39,32 +40,35 @@ static uint8_t pUnSubscribeRequest[MQTT_TOPIC_LENGTH_MAX + 6];
 static uint8_t pPublishRequest[MQTT_TOPIC_LENGTH_MAX + MQTT_PAYLOAD_LENGTH_MAX + 5];
 static uint8_t pConnectRequest[128];
 
-void mqttConnect(String mqttClientId, uint8_t mqttAliveTime, String mqttUsername, String mqttPassword)
+void mqttConnect(char* mqttClientId, uint8_t mqttAliveTime, char* mqttUsername, char* mqttPassword)
 {
+    uint8_t mqttClientIdLength = strlen(mqttClientId);
+    uint8_t mqttUsernameLength = strlen(mqttUsername);
+    uint8_t mqttPasswordLength = strlen(mqttPassword);
     mqttConnectHeader[11] = mqttAliveTime;
-    mqttConnectHeader[1] = 10 + 2 + mqttClientId.length() + 2 + mqttUsername.length() + 2 + mqttPassword.length();
+    mqttConnectHeader[1] = 10 + 2 + mqttClientIdLength + 2 + mqttUsernameLength + 2 + mqttPasswordLength;
     int i;
     for (i = 0; i < 12; i++)
     {
         pConnectRequest[i] = mqttConnectHeader[i];
     }
     pConnectRequest[12] = 0;
-    pConnectRequest[13] = mqttClientId.length();
-    for (i = 0; i < mqttClientId.length(); i++)
+    pConnectRequest[13] = mqttClientIdLength;
+    for (i = 0; i < mqttClientIdLength; i++)
     {
-        pConnectRequest[i + 12 + 2] = (uint8_t)mqttClientId.charAt(i);
+        pConnectRequest[i + 12 + 2] = (uint8_t) mqttClientId[i];
     }
-    pConnectRequest[12 + 2 + mqttClientId.length()] = 0;
-    pConnectRequest[12 + 2 + mqttClientId.length() + 1] = mqttUsername.length();
-    for (i = 0; i < mqttUsername.length(); i++)
+    pConnectRequest[12 + 2 + mqttClientIdLength] = 0;
+    pConnectRequest[12 + 2 + mqttClientIdLength + 1] = mqttUsernameLength;
+    for (i = 0; i < mqttUsernameLength; i++)
     {
-        pConnectRequest[i + 12 + 2 + mqttClientId.length() + 2] = (uint8_t)mqttUsername.charAt(i);
+        pConnectRequest[i + 12 + 2 + mqttClientIdLength + 2] = (uint8_t) mqttUsername[i];
     }
-    pConnectRequest[12 + 2 + mqttClientId.length() + 2 + mqttUsername.length()] = 0;
-    pConnectRequest[12 + 2 + mqttClientId.length() + 2 + mqttUsername.length() + 1] = mqttPassword.length();
-    for (i = 0; i < mqttPassword.length(); i++)
+    pConnectRequest[12 + 2 + mqttClientIdLength + 2 + mqttUsernameLength] = 0;
+    pConnectRequest[12 + 2 + mqttClientIdLength + 2 + mqttUsernameLength + 1] = mqttPasswordLength;
+    for (i = 0; i < mqttPasswordLength; i++)
     {
-        pConnectRequest[i + 12 + 2 + mqttClientId.length() + 2 + mqttUsername.length() + 2] = (uint8_t)mqttPassword.charAt(i);
+        pConnectRequest[i + 12 + 2 + mqttClientIdLength + 2 + mqttUsernameLength + 2] = (uint8_t) mqttPassword[i];
     }
     webSocket.sendBIN(pConnectRequest, mqttConnectHeader[1] + 2);
 }
@@ -187,7 +191,7 @@ void publishStackPop()
 // #endif
 // }
 
-void mqttCallback(uint8_t *messagePayload, size_t messageLength)
+void mqttCallback(uint8_t* messagePayload, size_t messageLength)
 {
     if (WS_MQTT_STATUS == MQTT_CONNECTED)
     {
@@ -272,16 +276,16 @@ void mqttLoop()
     {
         if ((millis() - lastTimeMQTTConnect) > MQTT_CONNECT_INTERVAL)
         {
-            mqttConnect(mqttClientName, mqttAliveTime, mqttUsername, mqttPassword);
+            mqttConnect(mqttClientId, mqttAliveTime, mqttUsername, mqttPassword);
             lastTimeMQTTConnect = millis();
 #if defined(DEVMODE)
-            Serial.println("Connecting to the broker as " + mqttClientName);
+            Serial.println("Connecting to the broker as " + String(mqttClientId));
 #endif
         }
     }
 }
 
-void wsCallbackEvent(WStype_t messageType, uint8_t *messagePayload, size_t messageLength)
+void wsCallbackEvent(WStype_t messageType, uint8_t* messagePayload, size_t messageLength)
 {
     switch (messageType)
     {
@@ -316,7 +320,7 @@ void wsCallbackEvent(WStype_t messageType, uint8_t *messagePayload, size_t messa
     }
 }
 
-void mqttSetup(char *mqttServer, int mqttPort, int mqttReconnectInterval, char *mqttDomain)
+void mqttSetup(char* mqttServer, int mqttPort, int mqttReconnectInterval, char* mqttDomain)
 {
     webSocket.setReconnectInterval(mqttReconnectInterval);
     webSocket.begin(mqttServer, mqttPort, mqttDomain);
@@ -329,15 +333,15 @@ void setMqttTopic(String topic)
     mqttTopic = topic;
 }
 
-void setMqttAuthentication(String username, String password)
+void setMqttAuthentication(char* username, char* password)
 {
     mqttUsername = username;
     mqttPassword = password;
 }
 
-void setMqttClientName(String clientName)
+void setMqttClientId(char* clientId)
 {
-    mqttClientName = clientName;
+    mqttClientId = clientId;
 }
 
 void setMqttWifiConnected()
