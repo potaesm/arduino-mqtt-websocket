@@ -182,7 +182,7 @@ void publishStackPop()
     }
 }
 
-// mqttPayloadProcess(char* mqttPayload, int mqttPayloadLength)
+// mqttPayloadProcess(char* mqttPayload, unsigned int mqttPayloadLength)
 // {
 // #if defined(DEVMODE)
 //     Serial.print("mqttPayload: >>");
