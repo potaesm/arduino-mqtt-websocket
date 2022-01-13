@@ -295,7 +295,6 @@ void wsCallbackEvent(WStype_t messageType, uint8_t* messagePayload, size_t messa
 #if defined(DEVMODE)
         Serial.println("Websocket disconnected");
 #endif
-        checkInternet(wifiSSID, wifiPassword);
         break;
     }
     case WStype_CONNECTED:
