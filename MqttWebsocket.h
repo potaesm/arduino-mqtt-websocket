@@ -348,7 +348,7 @@ void setMqttWifiConnected()
     WS_MQTT_STATUS = WIFI_CONNECTED;
 }
 
-bool isMqttWifiConnected()
+bool isMqttWsConnected()
 {
     return WS_MQTT_STATUS >= WS_DISCONNECTED;
 }
