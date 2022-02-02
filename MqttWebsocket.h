@@ -322,7 +322,7 @@ void wsCallbackEvent(WStype_t messageType, uint8_t* messagePayload, size_t messa
 void mqttSetup(char* mqttServer, int mqttPort, int mqttReconnectInterval, char* mqttDomain)
 {
     webSocket.setReconnectInterval(mqttReconnectInterval);
-    webSocket.begin(mqttServer, mqttPort, mqttDomain);
+    webSocket.beginSSL(mqttServer, mqttPort, mqttDomain);
     webSocket.onEvent(wsCallbackEvent);
     WS_MQTT_STATUS = WS_DISCONNECTED;
 }
